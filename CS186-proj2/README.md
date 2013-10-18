@@ -31,7 +31,7 @@ Finally, you might notice that the iterators in this project extend the Operator
 
 2.1. Filter and Join
 
-Recall that SimpleDB DbIterator classes implement the operations of the relational algebra. You will now implement two operators that will enable you to perform queries that are slightly more interesting than a table scan.
+SimpleDB DbIterator classes implement the operations of the relational algebra.
 Filter: This operator only returns tuples that satisfy a Predicate that is specified as part of its constructor. Hence, it filters out any tuples that do not match the predicate.
 Join: This operator joins tuples from its two children according to a JoinPredicate that is passed in as part of its constructor. We only require a simple nested loops join, but you may explore more interesting join implementations. Describe your implementation in your project writeup.
 Exercise 1. Implement the skeleton methods in:
@@ -39,11 +39,17 @@ src/simpledb/Predicate.java
 src/simpledb/JoinPredicate.java
 src/simpledb/Filter.java
 src/simpledb/Join.java
+
 At this point, your code should pass the unit tests in PredicateTest, JoinPredicateTest, FilterTest, and JoinTest. Furthermore, you should be able to pass the system tests FilterTest and JoinTest.
+
 2.2. Aggregates
 
-An additional SimpleDB operator implements basic SQL aggregates with a GROUP BY clause. You should implement the five SQL aggregates (COUNT, SUM, AVG, MIN, MAX) and support grouping. You only need to support aggregates over a single field, and grouping by a single field.
-In order to calculate aggregates, we use an Aggregator interface which merges a new tuple into the existing calculation of an aggregate. The Aggregator is told during construction what operation it should use for aggregation. Subsequently, the client code should call Aggregator.mergeTupleIntoGroup() for every tuple in the child iterator. After all tuples have been merged, the client can retrieve a DbIterator of aggregation results. Each tuple in the result is a pair of the form (groupValue, aggregateValue), unless the value of the group by field was Aggregator.NO_GROUPING, in which case the result is a single tuple of the form (aggregateValue).
+An additional SimpleDB operator implements basic SQL aggregates with a GROUP BY clause. 
+You should implement the five SQL aggregates (COUNT, SUM, AVG, MIN, MAX) and support grouping. 
+You only need to support aggregates over a single field, and grouping by a single field.
+In order to calculate aggregates, we use an Aggregator interface which merges a new tuple into the existing calculation of an aggregate. The Aggregator is told during construction what operation it should use for aggregation. 
+Subsequently, the client code should call Aggregator.mergeTupleIntoGroup() for every tuple in the child iterator. After all tuples have been merged, the client can retrieve a DbIterator of aggregation results. 
+Each tuple in the result is a pair of the form (groupValue, aggregateValue), unless the value of the group by field was Aggregator.NO_GROUPING, in which case the result is a single tuple of the form (aggregateValue).
 
 Note that this implementation requires space linear in the number of distinct groups. For the purposes of this project, you do not need to worry about the situation where the number of groups exceeds available memory.
 
@@ -52,6 +58,7 @@ src/simpledb/IntegerAggregator.java
 src/simpledb/StringAggregator.java
 src/simpledb/Aggregate.java
 At this point, your code should pass the unit tests IntegerAggregatorTest, StringAggregatorTest, and AggregateTest. Furthermore, you should be able to pass the AggregateTest system test.
+
 2.3. HeapFile Mutability
 
 Now, we will begin to implement methods to support modifying tables. We begin at the level of individual pages and files. There are two main sets of operations: adding tuples and removing tuples.
@@ -331,11 +338,3 @@ $ ant systemtest
 [additional tests]
 If any of these commands fail, we'll be unhappy, and, therefore, so will your grade.
 An additional 25% of your grade will be based on the quality of your writeup and our subjective evaluation of your code.
-
-We've had a lot of fun designing this assignment, and we hope you enjoy hacking on it!
-
-
-
-Acknowledgements
-
-Thanks to our friends and colleagues at MIT and UWashington for doing all the heavy lifting on creating SimpleDB
