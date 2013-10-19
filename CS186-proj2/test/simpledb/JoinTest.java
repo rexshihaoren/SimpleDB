@@ -56,6 +56,7 @@ public class JoinTest extends SimpleDbTestBase {
   /**
    * Unit test for Join.getTupleDesc()
    */
+
   @Test public void getTupleDesc() {
     JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
     Join op = new Join(pred, scan1, scan2);
@@ -67,6 +68,7 @@ public class JoinTest extends SimpleDbTestBase {
   /**
    * Unit test for Join.rewind()
    */
+  
   @Test public void rewind() throws Exception {
     JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
     Join op = new Join(pred, scan1, scan2);
@@ -97,6 +99,7 @@ public class JoinTest extends SimpleDbTestBase {
   /**
    * Unit test for Join.getNext() using an = predicate
    */
+  
   @Test public void eqJoin() throws Exception {
     JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
     Join op = new Join(pred, scan1, scan2);

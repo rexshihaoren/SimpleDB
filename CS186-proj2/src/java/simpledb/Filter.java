@@ -20,7 +20,6 @@ public class Filter extends Operator {
      */
     private DbIterator child;
     private TupleDesc td;
-    private ArrayList<Tuple> childTups = new ArrayList<Tuple>();
     private Iterator<Tuple> it;
     private Predicate p;
     public Filter(Predicate p, DbIterator child) {

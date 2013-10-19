@@ -88,8 +88,9 @@ public class TestUtil {
      *   corresponding fields in the two Tuples are all equal.
      */
     public static boolean compareTuples(Tuple t1, Tuple t2) {
-        if (t1.getTupleDesc().numFields() != t2.getTupleDesc().numFields())
+        if (t1.getTupleDesc().numFields() != t2.getTupleDesc().numFields()) 
             return false;
+
 
         for (int i = 0; i < t1.getTupleDesc().numFields(); ++i) {
             if (!(t1.getTupleDesc().getFieldType(i).equals(t2.getTupleDesc().getFieldType(i))))
@@ -132,11 +133,13 @@ public class TestUtil {
         boolean matched = false;
         while (expected.hasNext()) {
             Tuple expectedTup = expected.next();
+                                                    System.out.println("expectedTup"+expectedTup.toString());
             matched = false;
             actual.rewind();
-
             while (actual.hasNext()) {
                 Tuple next = actual.next();
+
+                //System.out.println(next.toString());
                 if (compareTuples(expectedTup, next)) {
                     matched = true;
                     break;

@@ -43,6 +43,7 @@ public class JoinPredicate implements Serializable {
         // some code goes here
         Field t1Field=t1.getField(field1);
         Field t2Field=t2.getField(field2);
+        System.out.println(t1Field.toString()+ op.toString()+t2Field.toString());
         return t1Field.compare(op, t2Field);
     }
     

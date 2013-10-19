@@ -24,6 +24,8 @@ public class Join extends Operator {
     private DbIterator child1, child2;
     private TupleDesc td, td1, td2;
     private int field1,field2;
+    private ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+    private Iterator<Tuple> it;
     public Join(JoinPredicate p, DbIterator child1, DbIterator child2) {
         // some code goes here
         this.p=p;
@@ -66,7 +68,8 @@ public class Join extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return TupleDesc.merge(td1,td2);
+        td=TupleDesc.merge(td1,td2);
+        return td;
     }
 
     public void open() throws DbException, NoSuchElementException,
@@ -74,18 +77,38 @@ public class Join extends Operator {
         // some code goes here
         child1.open();
         child2.open();
+        //simple nested loop
+        //outerloop
+        while (child1.hasNext()){
+            Tuple c1=child1.next();           
+                //innerloop
+                while(child2.hasNext()){
+                    Tuple c2=child2.next();
+                    //check if they satisfies the JoinPredicate
+                    if (p.filter(c1,c2)){
+                        //construct new merged Tuple
+                        Tuple mergedTp= Tuple.merge(c1,c2);
+                        tuples.add(mergedTp);
+                    }
+                }
+                //innerloop rewind
+                child2.rewind();
+        }
+        it=tuples.iterator();
+        super.open();
     }
 
     public void close() {
         // some code goes here
         child1.close();
         child2.close();
+        super.close();
+        it=null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
-        child1.rewind();
-        child2.rewind();
+        it = tuples.iterator();
     }
 
     /**
@@ -108,32 +131,31 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        while (child1.hasNext()){
-            Tuple c1=child1.next();
-            while(child2.hasNext()){
-                Tuple c2=child2.next();
-                if (p.filter(c1,c2)){
-                    ArrayList<Integer> fieldList;
-                    fieldList.add(field2);
-                    return 
-
-                }
-
-            }
-
-        }
-        return null;
+        if (it != null && it.hasNext()) {
+            return it.next();
+        } else
+            return null;
     }
 
     @Override
     public DbIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new DbIterator[] { this.child1, this.child2 };
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
         // some code goes here
+        if (this.child1!=children[0])
+        {
+            this.child1 = children[0];
+        }
+
+        if (this.child2!=children[1])
+        {
+            this.child2 = children[1];
+        }
+
     }
 
 }

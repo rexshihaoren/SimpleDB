@@ -1,4 +1,4 @@
-Proj1 Write-up
+Proj2 Write-up
 
 >>Descriptions
 #TupleDesc: Chose to use ArrayList to store all the fields I have. Reason: I need to store an array of fields, which support list operations, and permits null. I also want to manipulate the size. ArrayList also makes iteration easier.
@@ -25,3 +25,7 @@ The delimma of using hashcode or other unique ids we could use.
 Since I forgot java is extremely strict with variable types,using 8 instead of 8.0 gave me bug,though I fixed it.
 NullpointerException gives me trouble, since null is allowed in many cases, and they need to be taken care of.
 The jumpstar of using java is bit challenging, since I haven't used it for a long, so Bit Operation, RandomAccess, and the handling of Exceptions are confusing at first.
+
+
+
+#Join: use simple nested loop, use ArrayList to store qualified tuples, Initialize this ArrayList of Tuples in the open() method. This data structure makes it easier to do fetchNext(), and rewind().
