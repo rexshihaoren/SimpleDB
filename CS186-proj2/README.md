@@ -62,6 +62,7 @@ At this point, your code should pass the unit tests IntegerAggregatorTest, Strin
 2.3. HeapFile Mutability
 
 Now, we will begin to implement methods to support modifying tables. We begin at the level of individual pages and files. There are two main sets of operations: adding tuples and removing tuples.
+
 Removing tuples: To remove a tuple, you will need to implement deleteTuple. Tuples contain RecordIDs which allow you to find the page they reside on, so this should be as simple as locating the page a tuple belongs to and modifying the headers of the page appropriately.
 
 Adding tuples: The insertTuple method in HeapFile.java is responsible for adding a tuple to a heap file. To add a new tuple to a HeapFile, you will have to find a page with an empty slot. If no such pages exist in the HeapFile, you need to create a new page and append it to the physical file on disk. You will need to ensure that the RecordID in the tuple is updated correctly.
@@ -87,8 +88,8 @@ At this point, your code should pass the unit tests in HeapPageWriteTest and Hea
 Now that you have written all of the HeapFile machinery to add and remove tuples, you will implement the Insert and Delete operators.
 For plans that implement insert and delete queries, the top-most operator is a special Insert or Delete operator that modifies the pages on disk. These operators return the number of affected tuples. This is implemented by returning a single tuple with one integer field, containing the count.
 
-Insert: This operator adds the tuples it reads from its child operator to the tableid specified in its constructor. It should use the BufferPool.insertTuple() method to do this.
-Delete: This operator deletes the tuples it reads from its child operator from the tableid specified in its constructor. It should use the BufferPool.deleteTuple() method to do this.
+Insert: adds the tuples it reads from its child operator to the tableid specified in its constructor. It should use the BufferPool.insertTuple() method to do this.
+Delete: deletes the tuples it reads from its child operator from the tableid specified in its constructor. It should use the BufferPool.deleteTuple() method to do this.
 Exercise 4. Implement the skeleton methods in:
 src/simpledb/Insert.java
 src/simpledb/Delete.java

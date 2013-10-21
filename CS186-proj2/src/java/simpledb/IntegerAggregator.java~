@@ -68,7 +68,7 @@ public class IntegerAggregator implements Aggregator {
 	value = ((IntField)tup.getField(aggregateField)).getValue();
 
 	// find the current currentAggregateValue:
-	if (counts.containsKey(key)) {
+	if (counts.containsKey(key) {
 		currentCount = counts.get(key);
 	}
 	if (groups.containsKey(key)) {
@@ -88,7 +88,7 @@ public class IntegerAggregator implements Aggregator {
 		}
 	}
 	currentAggregateValue = groups.get(key);
-	currentCount = counts.get(key);
+	currentCounts = counts.get(key);
 
 
 	if (op==Op.MIN){
@@ -119,6 +119,7 @@ public class IntegerAggregator implements Aggregator {
 	//figure out how to keep track of counts for AVG
 		currentCount++;
 		counts.put(key, currentCount);
+
 		currentAggregateValue += value;
 		groups.put(key, currentAggregateValue);
 	}
@@ -173,6 +174,7 @@ public TupleDesc getTupleDesc() {
 			Tuple tuple = new Tuple(td);
 			tuple.setField(0, new IntField(value));
 			tuples.add(tuple);
+			System.out.println("nogroup"+op.toString()+ "and" + key + "and" + value);
 		}
 	} else {
 		for (Field key : groups.keySet()){
@@ -186,6 +188,7 @@ public TupleDesc getTupleDesc() {
 			tuple.setField(1, new IntField(value));
 			tuples.add(tuple);
 
+			System.out.println(op.toString()+ "and" + key + "and" + value);
 
 		}
 	}

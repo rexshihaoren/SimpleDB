@@ -1,5 +1,6 @@
 package simpledb;
 import java.util.*;
+
 /**
  * Knows how to compute some aggregate over a set of IntFields.
  */
@@ -55,8 +56,7 @@ public class IntegerAggregator implements Aggregator {
         // some code goes here
 	Field key;//tup's goupby field
 	int value;//tup's aggregateField value
-	int currentAggregateValue;//current agg value for the key	
-	int currentCount; //current counts value for the key
+	int currentAggregateValue;//current agg value for the key
 
 	//find Field Key
 	if (noGrouping) {
@@ -68,9 +68,6 @@ public class IntegerAggregator implements Aggregator {
 	value = ((IntField)tup.getField(aggregateField)).getValue();
 
 	// find the current currentAggregateValue:
-	if (counts.containsKey(key)) {
-		currentCount = counts.get(key);
-	}
 	if (groups.containsKey(key)) {
 		currentAggregateValue = groups.get(key);
 	} else {//groups does not yet contain this key
@@ -80,15 +77,11 @@ public class IntegerAggregator implements Aggregator {
 		}
 		if (op==Op.MAX) {
 			groups.put(key, -99999);
-			counts.put(key, 0);
 		}
 		if (op==Op.MIN) {
 			groups.put(key, 99999);
-			counts.put(key, 0);
 		}
 	}
-	currentAggregateValue = groups.get(key);
-	currentCount = counts.get(key);
 
 
 	if (op==Op.MIN){
@@ -117,10 +110,11 @@ public class IntegerAggregator implements Aggregator {
 	
 	if (op==Op.AVG){
 	//figure out how to keep track of counts for AVG
-		currentCount++;
-		counts.put(key, currentCount);
+		int count = counts.get(key);
+		count++;	
+		counts.put(key, count);
+
 		currentAggregateValue += value;
-		groups.put(key, currentAggregateValue);
 	}
 	
 
@@ -149,7 +143,7 @@ public TupleDesc getTupleDesc() {
 		stringAr[0] = "aggregateValue";//don't actually need real field name
 	} else {
 		typeAr = new Type[2];
-		stringAr = new String[2];
+		stringAr = new Type[2];
 		typeAr[0] = gbFieldType;
 		typeAr[1] = Type.INT_TYPE;
 		stringAr[0] = "groupValue";
@@ -168,7 +162,7 @@ public TupleDesc getTupleDesc() {
 		for (Field key : groups.keySet()){
 			int value = groups.get(key);
 			if (op == Op.AVG) {
-				value = value/counts.get(key);
+				value = value / counts.get(key);
 			}
 			Tuple tuple = new Tuple(td);
 			tuple.setField(0, new IntField(value));
@@ -185,8 +179,6 @@ public TupleDesc getTupleDesc() {
 			tuple.setField(0, key);
 			tuple.setField(1, new IntField(value));
 			tuples.add(tuple);
-
-
 		}
 	}
 	return new TupleIterator(td, tuples);

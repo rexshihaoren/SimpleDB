@@ -263,7 +263,7 @@ public class TupleDesc implements Serializable {
     public String toString() {
         // some code goes here
         String descrip = "";
-        for (int i =0; i< this.numFields()-1;i++){
+        for (int i =0; i< this.numFields();i++){
             descrip+=this.getFieldType(i).toString()+"("+this.getFieldName(i).toString()+")"+",";
         }
 

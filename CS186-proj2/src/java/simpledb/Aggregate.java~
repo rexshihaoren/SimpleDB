@@ -57,10 +57,10 @@ public class Aggregate extends Operator {
 		gbFieldType = child.getTupleDesc().getFieldType(gField);
 	}
 	
-	if (aFieldType == Type.INT_TYPE) {
+	if (aFieldType = Type.INT_TYPE) {
 		aggregator = new IntegerAggregator(gField, gbFieldType, aField, op);
 	} else {
-		aggregator = new StringAggregator(gField, gbFieldType, aField, op);
+		aggregator = new StringAggregator(gField, gbFieldTypel aField, op);
 	}
     }
 
@@ -125,9 +125,8 @@ public class Aggregate extends Operator {
 	while(child.hasNext()){
 		aggregator.mergeTupleIntoGroup(child.next());
 	}
-	aggregatedChild = aggregator.iterator();
-	aggregatedChild.open();
-    super.open();
+		aggregatedChild = aggregator.iterator();
+		aggregatedChild.open();
     }
 
     /**
@@ -140,7 +139,7 @@ public class Aggregate extends Operator {
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
 	// some code goes here
         if (aggregatedChild.hasNext()) {
-		Tuple t=aggregatedChild.next();
+		Tuple t=child.next();
 		return t;
         }
         return null;
@@ -165,19 +164,13 @@ public class Aggregate extends Operator {
      */
     public TupleDesc getTupleDesc() {
 	// some code goes here
-	Type aFieldType = child.getTupleDesc().getFieldType(aField);
-	if (aFieldType ==Type.INT_TYPE) {
-		return ((IntegerAggregator)aggregator).getTupleDesc();
-	} else {
-		return ((StringAggregator)aggregator).getTupleDesc();
-	}
+	return aggregator.getTupleDesc();
     }
 
     public void close() {
 	// some code goes here
 	child.close();
 	aggregatedChild.close();
-    super.close();
     }
 
     @Override

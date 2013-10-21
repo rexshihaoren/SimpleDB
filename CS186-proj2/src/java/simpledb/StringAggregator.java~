@@ -110,6 +110,7 @@ public TupleDesc getTupleDesc() {
 			Tuple tuple = new Tuple(td);
 			tuple.setField(0, new IntField(value));
 			tuples.add(tuple);
+			System.out.println("nogroup"+op.toString()+ "and" + key + "and" + value);
 		}
 	} else {
 		for (Field key : groups.keySet()){
@@ -121,6 +122,7 @@ public TupleDesc getTupleDesc() {
 			tuple.setField(1, new IntField(value));
 			tuples.add(tuple);
 
+			System.out.println(op.toString()+ "and" + key + "and" + value);
 
 		}
 	}

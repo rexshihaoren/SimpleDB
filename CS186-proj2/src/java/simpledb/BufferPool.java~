@@ -276,12 +276,10 @@ public class BufferPool {
     }
 
 public void updateRecentlyUsed() {
-	if (!recentlyUsed.isEmpty()){
-		for (PageId key : recentlyUsed.keySet()) {
-			int value = recentlyUsed.get(key);
-			value++;
-			recentlyUsed.put(key, value);	
-		}
+	for (PageId key : recentlyUsed.keySet()) {
+		int value = recentlyUsed.get(key);
+		value++;
+		recentlyUsed.put(key, value);	
 	}
 }
 

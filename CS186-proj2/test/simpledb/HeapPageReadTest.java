@@ -10,9 +10,9 @@ import java.util.*;
 
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
+import junit.framework.Assert;
 import junit.framework.JUnit4TestAdapter;
 
 public class HeapPageReadTest extends SimpleDbTestBase {
@@ -97,6 +97,19 @@ public class HeapPageReadTest extends SimpleDbTestBase {
             assertEquals(EXAMPLE_VALUES[row][1], f1.getValue());
             row++;
         }
+    }
+
+    /**
+     * Test remove method of the iterator.
+     */
+    @Test public void new_iteratorTest() throws Exception {
+        HeapPage page = new HeapPage(pid, EXAMPLE_DATA);
+        Iterator<Tuple> it = page.iterator();
+
+        try {
+            it.remove();
+            Assert.fail("Calling remove method should result a UnsupportedOperationException.");
+        } catch (UnsupportedOperationException e) {}
     }
 
     /**
