@@ -11,7 +11,6 @@ import java.util.*;
  * constructor.
  * 
  * @see simpledb.HeapPage#HeapPage
- * @author Sam Madden
  */
 public class HeapFile implements DbFile {
 
@@ -77,7 +76,9 @@ public class HeapFile implements DbFile {
             rAf.seek(offset);
             rAf.read(b, 0, BufferPool.PAGE_SIZE);
             HeapPageId hpid=(HeapPageId)pid;
-            return new HeapPage(hpid, b);           
+            rAf.close();  
+
+            return new HeapPage(hpid, b);         
             }catch (IOException e){
                 e.printStackTrace();
             }
@@ -97,7 +98,8 @@ public class HeapFile implements DbFile {
             byte[] b=new byte[BufferPool.PAGE_SIZE];
             b=page.getPageData();
             rAf.seek(offset);
-            rAf.write(b, 0, BufferPool.PAGE_SIZE);           
+            rAf.write(b, 0, BufferPool.PAGE_SIZE);
+            rAf.close();          
         }catch (IOException e){
             e.printStackTrace();
         }

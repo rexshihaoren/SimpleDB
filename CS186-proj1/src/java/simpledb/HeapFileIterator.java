@@ -71,7 +71,6 @@ public class HeapFileIterator implements DbFileIterator {
             }
             
         }
-        
         // Returns a list of tuples from page 
         private List<Tuple> getTupleLsFrPg(int pgNum) throws TransactionAbortedException, DbException{
             

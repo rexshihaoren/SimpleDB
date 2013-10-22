@@ -133,7 +133,6 @@ public class TestUtil {
         boolean matched = false;
         while (expected.hasNext()) {
             Tuple expectedTup = expected.next();
-                                                    System.out.println("expectedTup"+expectedTup.toString());
             matched = false;
             actual.rewind();
             while (actual.hasNext()) {

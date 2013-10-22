@@ -19,7 +19,9 @@ public class BufferPool {
     /** param for buffer capacity numPages*/
     private int numPages;
     /** structure to store buffer pages*/
-    private HashMap<Integer, Page> bufferMap;
+    private HashMap<PageId, Page> bufferMap;//pageId, page
+
+	private HashMap<PageId, Integer> recentlyUsed;
 
 
     /** Default number of pages passed to the constructor. This is used by
@@ -35,7 +37,8 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         this.numPages=numPages;
-        bufferMap=new HashMap<Integer, Page>();
+        bufferMap=new HashMap<PageId, Page>();
+	recentlyUsed=new HashMap<PageId, Integer>();
 
     }
 
@@ -58,9 +61,12 @@ public class BufferPool {
         throws TransactionAbortedException, DbException {
         // some code goes here
         //check if the page is in the bufferMap
-        int pagecode=pid.hashCode();
-        if (bufferMap.containsKey(pagecode)){
-            return bufferMap.get(pagecode);
+        if (bufferMap.containsKey(pid)){
+
+		//update the recentlyUsed hashmap
+		updateRecentlyUsed();
+		recentlyUsed.put(pid, 0);//this page was just accessed
+            return bufferMap.get(pid);
 
         } else {
             List<Table>tableList=Database.getCatalog().getTables();
@@ -69,14 +75,18 @@ public class BufferPool {
                     DbFile file=t.get_file();
                     Page pageRead=file.readPage(pid);
                     if (numPages<=bufferMap.size()){
-                        throw new DbException("BufferPool numPages reached");
+			//will have to deal with eviction here
+			evictPage();
                     }
-                    bufferMap.put(pagecode,pageRead);
+                    bufferMap.put(pid,pageRead);
+			updateRecentlyUsed();
+			recentlyUsed.put(pid, 0);//this page was just accessed
                     return pageRead;  
                 }           
             }
-            throw new DbException("page requested not in bufferpool or disk");
+
         }      
+            throw new DbException("page requested not in bufferpool or disk");
     }
 
     /**
@@ -141,6 +151,28 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for proj1
+        try{
+        	ArrayList<Page> affectedPages;
+        	DbFile dbFile = Database.getCatalog().getDbFile(tableId);
+        	HeapFile heapFile = (HeapFile)dbFile;
+        	affectedPages = heapFile.insertTuple(tid, t);
+        	//iterate through affectedPages and markDirty
+		//also update cached pages
+        	for (Page page : affectedPages) {
+        		page.markDirty(true,tid);
+			bufferMap.put(page.getId(), page);
+        	}
+        }
+        catch (DbException e){
+                e.printStackTrace();
+            }
+        catch (TransactionAbortedException e){
+                e.printStackTrace();
+            }
+        catch (IOException e){
+                e.printStackTrace();
+            }
+
     }
 
     /**
@@ -160,6 +192,12 @@ public class BufferPool {
         throws DbException, TransactionAbortedException {
         // some code goes here
         // not necessary for proj1
+	int tableId = t.getRecordId().getPageId().getTableId(); 
+	DbFile dbFile = Database.getCatalog().getDbFile(tableId);
+	HeapFile heapFile = (HeapFile)dbFile;
+	Page affectedPage = heapFile.deleteTuple(tid, t);
+	//iterate through affectedPages and markDirty
+    affectedPage.markDirty(true,tid);
     }
 
     /**
@@ -167,9 +205,13 @@ public class BufferPool {
      * NB: Be careful using this routine -- it writes dirty data to disk so will
      *     break simpledb if running in NO STEAL mode.
      */
+	//call flushPage on all pages in the bp
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
         // not necessary for proj1
+	for (PageId key : bufferMap.keySet()) {
+		flushPage(key);
+	}
 
     }
 
@@ -187,12 +229,20 @@ public class BufferPool {
      * Flushes a certain page to disk
      * @param pid an ID indicating the page to flush
      */
+//write page to dsk and mark as not dirty
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for proj1
+	Page page = bufferMap.get(pid);
+	int tableId = ((HeapPageId)pid).getTableId();
+	HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
+	hf.writePage(page);
+	page.markDirty(false, null);
+	
     }
 
     /** Write all pages of the specified transaction to disk.
+	* NEED FOR PROJ2?????
      */
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
@@ -206,6 +256,35 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for proj1
+	Page evictedPage;
+	int counter = -1;
+	PageId evictedPageId = null;
+	for (PageId key : recentlyUsed.keySet()) {
+		int value = recentlyUsed.get(key);
+		if (value > counter) {	
+			counter = value;
+			evictedPageId = key;
+		}
+	}
+	evictedPage = bufferMap.get(evictedPageId);
+	try{
+		flushPage(evictedPageId);
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
+	bufferMap.remove(evictedPageId);
+	recentlyUsed.remove(evictedPageId);
     }
+
+public void updateRecentlyUsed() {
+	if (!recentlyUsed.isEmpty()){
+		for (PageId key : recentlyUsed.keySet()) {
+			int value = recentlyUsed.get(key);
+			value++;
+			recentlyUsed.put(key, value);	
+		}
+	}
+}
 
 }

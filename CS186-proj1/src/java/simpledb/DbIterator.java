@@ -1,6 +1,7 @@
 package simpledb;
 import java.io.Serializable;
 import java.util.*;
+import java.io.*;
 
 /**
  * DbIterator is the iterator interface that all SimpleDB operators should

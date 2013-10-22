@@ -13,7 +13,7 @@ public class StringAggregator implements Aggregator {
 	private Op op;
 	private boolean noGrouping = false;//true if NO_GROUPING
 	private HashMap<Field, Integer> groups; //(groupValue, aggregateValue)
-
+	private String fieldName="", groupFieldName="";
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -46,12 +46,14 @@ public class StringAggregator implements Aggregator {
         // some code goes here
 	Field key;//tup's goupby field
 	int currentAggregateValue;//current agg value for the key
-
+	fieldName=tup.getTupleDesc().getFieldName(aggregateField);
 	//find Field Key
 	if (noGrouping) {
 		key = new IntField(Aggregator.NO_GROUPING);
 	} else {
 		key = tup.getField(gbField);
+		groupFieldName=tup.getTupleDesc().getFieldName(gbField);
+
 	}	
 	
 
@@ -76,14 +78,14 @@ public TupleDesc getTupleDesc() {
 		typeAr = new Type[1];
 		stringAr = new String[1];
 		typeAr[0] = Type.INT_TYPE;
-		stringAr[0] = "aggregateValue";//don't actually need real field name
+		stringAr[0] = fieldName;//don't actually need real field name
 	} else {
 		typeAr = new Type[2];
 		stringAr = new String[2];
 		typeAr[0] = gbFieldType;
 		typeAr[1] = Type.INT_TYPE;
-		stringAr[0] = "groupValue";
-		stringAr[1] = "aggregateValue";
+		stringAr[0] = groupFieldName;
+		stringAr[1] = fieldName;
 	}
 	td = new TupleDesc(typeAr, stringAr);
 	return td;

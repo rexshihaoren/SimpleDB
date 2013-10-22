@@ -157,8 +157,10 @@ public class BufferPool {
         	HeapFile heapFile = (HeapFile)dbFile;
         	affectedPages = heapFile.insertTuple(tid, t);
         	//iterate through affectedPages and markDirty
+		//also update cached pages
         	for (Page page : affectedPages) {
         		page.markDirty(true,tid);
+			bufferMap.put(page.getId(), page);
         	}
         }
         catch (DbException e){

@@ -160,10 +160,10 @@ public class TupleDesc implements Serializable {
                     return indexOfFiled;
                 }
 
-            }  
+            }
         }
-
         throw new NoSuchElementException("no field with matching name found");
+
     }
 
     /**

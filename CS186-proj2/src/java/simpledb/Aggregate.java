@@ -165,12 +165,28 @@ public class Aggregate extends Operator {
      */
     public TupleDesc getTupleDesc() {
 	// some code goes here
-	Type aFieldType = child.getTupleDesc().getFieldType(aField);
-	if (aFieldType ==Type.INT_TYPE) {
-		return ((IntegerAggregator)aggregator).getTupleDesc();
-	} else {
-		return ((StringAggregator)aggregator).getTupleDesc();
-	}
+        Type[] fieldType;
+        String[] fieldName;
+         
+        if(aField == Aggregator.NO_GROUPING){
+            fieldType = new Type[1];
+            fieldName = new String[1];
+            
+            fieldType[0] = child.getTupleDesc().getFieldType(aField);
+            fieldName[0] = op.toString() + "(" + child.getTupleDesc().getFieldName(aField) + ")";
+            
+            return new TupleDesc(fieldType, fieldName);
+        } else {
+            fieldType = new Type[2];
+            fieldName = new String[2];
+            
+            fieldType[0] = child.getTupleDesc().getFieldType(gField);
+            fieldName[0] = child.getTupleDesc().getFieldName(gField);
+            
+            fieldType[1] = child.getTupleDesc().getFieldType(aField);
+            fieldName[1] = op.toString() + "(" + child.getTupleDesc().getFieldName(aField) + ")";
+            return new TupleDesc(fieldType, fieldName);
+        }
     }
 
     public void close() {

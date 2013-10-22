@@ -15,7 +15,7 @@ public class IntegerAggregator implements Aggregator {
 	private HashMap<Field, Integer> groups; //(groupValue, aggregateValue)
 	//how to keep track of counts, sum for COUNT, SUM, AVG?::
 	private HashMap<Field, Integer> counts; //for AVG op
-	
+	private String fieldName="", groupFieldName="";
     /**
      * Aggregate constructor
      * 
@@ -57,12 +57,14 @@ public class IntegerAggregator implements Aggregator {
 	int value;//tup's aggregateField value
 	int currentAggregateValue;//current agg value for the key	
 	int currentCount; //current counts value for the key
-
+	fieldName=tup.getTupleDesc().getFieldName(aggregateField);
 	//find Field Key
 	if (noGrouping) {
 		key = new IntField(Aggregator.NO_GROUPING);
 	} else {
 		key = tup.getField(gbField);
+		groupFieldName=tup.getTupleDesc().getFieldName(gbField);
+
 	}	
 	
 	value = ((IntField)tup.getField(aggregateField)).getValue();
@@ -146,14 +148,14 @@ public TupleDesc getTupleDesc() {
 		typeAr = new Type[1];
 		stringAr = new String[1];
 		typeAr[0] = Type.INT_TYPE;
-		stringAr[0] = "aggregateValue";//don't actually need real field name
+		stringAr[0] = fieldName;//don't actually need real field name
 	} else {
 		typeAr = new Type[2];
 		stringAr = new String[2];
 		typeAr[0] = gbFieldType;
 		typeAr[1] = Type.INT_TYPE;
-		stringAr[0] = "groupValue";
-		stringAr[1] = "aggregateValue";
+		stringAr[0] = groupFieldName;
+		stringAr[1] = fieldName;
 	}
 	td = new TupleDesc(typeAr, stringAr);
 	return td;
