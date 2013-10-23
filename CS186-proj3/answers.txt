@@ -1,0 +1,40 @@
+Proj2 Write-up
+
+>>Descriptions
+#Predicate: use Field's compare method to implement the filter method.
+#JoinPredicate: The only difference between this and the Predicate is that it takes two fields.
+#Join: Used simple nested loop implementation. Used ArrayList to store qualified tuples. Initialize this ArrayList of Tuples in the open() method. This data structure makes it easier to do fetchNext(), and rewind(). Also initialized iterator<Tuple> it, to iterate through the tuples.
+#Filter: no need to change tuple, only need to filter out unwanted ones, fairly easy.
+
+#Aggregate: initialized appropriate Aggregator object (StringAggregator or IntegerAggregator); in open(), created a new DbIterator made from calling Aggregator#mergeTupleIntoGroup on all tuples in the child. We then open() this new DbIterator and fetchNext() calls tuples from this new DbIterator.
+#IntegerAggregator: initialized 2 HashMap<Field, Integer> objects called groups and counts. Groups stores <groupValue, aggregateValue> where groupValue is denoted by a Field object. Counts is a an object I maintain for the AVG op, and stores <groupValue(as Field), count(Integer) of how many there are>, so I can divide the value in groups by the corresponding value in counts for a given key when computing the AVG. Also created a helper method getTupleDesc() that returns the TupleDesc of tuples as the pair (groupVal, aggregateVal) or as one field (aggregateVal).
+#StringAggregator: implementation very similar to #IntegerAggregator, except I only support the COUNT op.
+
+#HeapPage: for deleteTuple(), throw a DbException if this tuple is not on this page, or tuple slot is already empty, and set that tuple in the ArrayList of Tuples to null, also calling markSlotUsed to change the header of this page. For insertTuple(), throw a DbException if the page is full (no empty slots) or tupledesc is a mismatch, insert Tuple to the next empty slot. Implemented a helper function to get the index of next empty slot, so we could just inserted in the tuple lists of this page.
+#HeapFile: in readPage() and writepage(), we used RandomAccessFile to read and write to the underlying File; created a helper method, to return an ArrayList of empty pages. In insertTuple(), if there is empty page in this file, insert this tuple to this page; otherwise, insert this tuple to a newly created page, and writePage.
+
+#BufferPool: (Please see the following paragraph describing the eviction policy and implementation)
+In BufferPool, initialized a HashMap<PageId, Integer> object called recentlyUsed to aid in our eviction policy; insertTuple() and deleteTuple() both find the appropriate HeapFile and then call the HeapFile's insertTuple() or deleteTuple() method. Then, we make sure to markDirty() affected Pages; and for insertTuple(), we update the BufferPool's cached version of the page. Wrote helper function updateRecentlyUsed() which updates the recentlyUsed HashMap. getPage() calls evictPage() if the BufferPool's full.
+
+**Eviction policy and implementation in BufferPool: implemented a LRU eviction policy. We maintain a HashMap<PageId, Integer> structure as mentioned above that holds the PageId's of all Pages in the BufferPool. The corresponding Integer value denotes how long ago a Page is accessed. When a page is read or brought into the BufferPool, the HashMap is updated by putting the key-value pair as (PageId, 0). The 0 denotes that this Page was read this round. Each call to getPage() will also update all other key-value pairs in the HashMap, incrementing their Integer value by 1, indicating that it was accessed one more round ago then the previous getPage() round. This is done with the helper method updateRecentlyUsed(). When we call evictPage(), we go through the HashMap structure and return the Page with the PageId that had the greatest Integer (indicating it was accessed the longest time ago). 
+
+#Insert#Delete: the fetchNext() method in both return a 1-field tuple containing the number of inserted records, or null if called more than once, so we initialized a boolean fetched = false that tells if we have already called fetchNext(); as soon as the insertion and deletion is done, we change it to true. And if fetchNext was called again, it will return null.
+
+>>Changed API
+No changes to the API except for the below listed changes from Proj1. A couple of helper methods were written, as mentioned above in the "Descriptions" section.
+These are changes from Proj1:
+#Table: Made Table a separate class. Reason: there are specific info(DbFile, name, and primarykey)about a table, we need to store it in catalog. I could have made it similar to TDItem's implementation, but this is easier to built, maintain and test.
+#HeapPageIterator, #HeapFileIterator: Made them seperate classes. Reason:These Iterators are not as straight-forward as the others. Also seperate class is easy to built, maintain and test.
+
+>>Missing or incomplete elements of your code
+Passed all tests for now. Might change structures later for proj3~4.
+
+>>Who worked on what
+PairProgramming driver and navigator
+Shihao Ren(bz): driver on 2.1
+Nan Li(bs): driver on 2.2
+Both: worked on 2.3-2.7
+
+>>Time&Difficulty
+Roughly 16 hours spanning over 3 days for the entire project.
+Difficulty: Aggregate was confusing at first. 
