@@ -289,7 +289,8 @@ public class LogicalPlan {
         HashMap<String,String> equivMap = new HashMap<String,String>();
         HashMap<String,Double> filterSelectivities = new HashMap<String, Double>();
         HashMap<String,TableStats> statsMap = new HashMap<String,TableStats>();
-
+		
+		//iterate through LogicalScanNodes (FROM tables)
         while (tableIt.hasNext()) {
             LogicalScanNode table = tableIt.next();
             SeqScan ss = null;
@@ -306,6 +307,7 @@ public class LogicalPlan {
 
         }
 
+		//iterate through FilterNodes(field, op, constant)
         Iterator<LogicalFilterNode> filterIt = filters.iterator();        
         while (filterIt.hasNext()) {
             LogicalFilterNode lf = filterIt.next();
@@ -344,6 +346,7 @@ public class LogicalPlan {
             //s.addSelectivityFactor(estimateFilterSelectivity(lf,statsMap));
         }
         
+        //create new JoinOptimizer
         JoinOptimizer jo = new JoinOptimizer(this,joins);
 
         joins = jo.orderJoins(statsMap,filterSelectivities,explain);

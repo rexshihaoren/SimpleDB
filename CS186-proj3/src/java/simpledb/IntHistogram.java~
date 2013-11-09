@@ -82,12 +82,8 @@ public class IntHistogram {
 
     	// some code goes here
     	if (op==Op.EQUALS) {
-		if (v<min || v>max) {
-			return 0.0;
-		} else {
-			height = histogram[bucketIndex];
-    			return (double)(height/width)/ntups;
-		}
+		height = histogram[bucketIndex];
+    		return (double)(height/width)/ntups;
     	}
     	if (op==Op.GREATER_THAN) {
     		if (v < min) {
@@ -172,21 +168,13 @@ public class IntHistogram {
     		}
     	}
     	if (op==Op.LIKE) {
-		if (v<min || v>max) {
-			return 0.0;
-		} else {
-			height = histogram[bucketIndex];
-    			return (double)(height/width)/ntups;
-		}
+		height = histogram[bucketIndex];
+    		return (double)(height/width)/ntups;
     	}
     	if (op==Op.NOT_EQUALS) {
-		if (v<min || v>max) {
-			return 1.0;
-		} else {
-			height = histogram[bucketIndex];
-    			double answer = (double)(height/width)/ntups;
-    			return 1.0-answer;
-		}
+		height = histogram[bucketIndex];
+    		double answer = (double)(height/width)/ntups;
+    		return 1.0-answer;
     	}
 	return 0.0; //should not get here, or something went wrong
     }

@@ -1,40 +1,132 @@
-Proj2 Write-up
+Write-up
+
+EXERCISE 1:
+Life of a query in SimpleDB
+
+Step 1: simpledb.Parser.main() and simpledb.Parser.start()
+simpledb.Parser.main() is the entry point for the SimpleDB system. It calls simpledb.Parser.start(). The latter performs three main actions:
+It populates the SimpleDB catalog from the catalog text file provided by the user as argument (Database.getCatalog().loadSchema(argv[0]);).
+For each table defined in the system catalog, it computes statistics over the data in the table by calling: TableStats.computeStatistics(), which then does: TableStats s = new TableStats(tableid, IOCOSTPERPAGE);
+It processes the statements submitted by the user (processNextStatement(new ByteArrayInputStream(statementBytes));)
+
+Step 2: simpledb.Parser.processNextStatement()
+This method takes two key actions:
+First, it gets a physical plan for the query by invoking handleQueryStatement((ZQuery)s);
+Then it executes the query by calling query.execute();
+
+Step 3: simpledb.Parser.handleQueryStatement()
+This method does two main actions:
+First it creates a LogicalPlan for the query by calling LogicalPlan lp = parseQueryLogicalPlan(tId, s).
+Then from that LogicalPlan, it creates a physical plan by calling the physicalPlan() method on the LogicalPlan returned from above (DbIterator physicalPlan = lp.physicalPlan(tId, TableStats.getStatsMap(), explain))
+Then it sets the physical plan and LogicalPlan for the query.
+
+Step 4: simpledb.Parser.parseQueryLogicalPlan():
+Here is where the parsing of the user inputed query statement gets processed, broken down, and validity checked. This method processes SELECT, FROM, WHERE, GROUP BYs, ORDER BYs and returns a LogicalPlan:
+
+Parses FROM clause and for each table, calls the LogicalPlan's addScan(id, name) method, which creates a LogicalScanNode.
+Parses WHERE clause with processExpression(tid, wx, lp).
+Gets GROUP BY field and value by calling getGroupBy() and getValue() on the ZQuery and ZExp
+Parses SELECT clause: for each selection, if there's an aggregate, pick out the aggregate field and function and call lp.addProjectField(aggField, aggFun). Otherwise, check the validity of the selection and if valid, add the simple projection without aggregation with addProjectField(). 
+If there's an ORDER BY, then add it to the LogicalPlan with lp.addOrderBy(f.getValue(), oby.getAscOrder()).
+
+Step 5: simpledb.LogicalPlan.physicalPlan():
+This method has several main functions: iterating through LogicalScanNodes, LogicalFilterNodes, LogicalJoinNodes, and LogicalSelectListNodes. It maintains a filterSelectivities HashMap and statsMap HashMap which holds the name of the field and corresponding selectivity (Double) and TableStats.
+
+Iterate through the LogicalScanNodes:
+Create a SeqScan of the table corresponding to the node, and put it in the subplanMap, statsMap, and filterSelectivities (with selectivity of 1.0).
+
+Iterate through the LogicalFilterNodes:
+Get the corresponding DbIterator from the subplanMap (the SeqScan created above), and updates it by doing filtering (subplanMap.put(lf.tableAlias, new Filter(p, subplan))). Get the corresponding TableStats from the statsMap and call estimateSelectivity(), then update this table in filterSelectivities by multiplying the value in the HashMap by the selectivity calculated. This gives the new selectivity accounting for the filtering.
+
+Iterate through the LogicalJoinNodes:
+First create a new JoinOptimizer, and calculate an efficient join ordering by calling orderJoins() with joins = jo.orderJoins(statsMap,filterSelectivities,explain). 
+Then we iterate through the LogicalJoinNodes created by the orderJoins() method, joining two tables at a time until there is only 1 table (and one subplan) left. 
+
+Then we check that after all the above runs, that there is only 1 subplan in the subplanMap, and get the DbIterator for it (called node).
+
+Iterate through the LogicalSelectListNodes:
+Iterate through each node and extract the field index (int) and Type, keeping note if it also has an aggregate. The field indexes and Types will be used to create a projection object (Project).
+
+If the query has an aggregate and/or order by, update the node DbIterator object and create the appropriate Aggregate or OrderBy DbIterator object.
+Finally return a Project object created from the child DbIterator (node) and the list of fields and types that are projected out (these 2 lists are created from iterating through the LogicalSelectListNodes).
+
+EXERCISE 6: 
+We used 0.1% database;The Schema:
+Actor with schema INT_TYPE(id),STRING_TYPE(fname),STRING_TYPE(lname),STRING_TYPE(gender)
+Movie with schema INT_TYPE(id),STRING_TYPE(name),INT_TYPE(year)
+Director with schema INT_TYPE(id),STRING_TYPE(fname),STRING_TYPE(lname)
+Casts with schema INT_TYPE(pid),INT_TYPE(mid),STRING_TYPE(role)
+Movie_Director with schema INT_TYPE(did),INT_TYPE(mid)
+Genre with schema INT_TYPE(mid),STRING_TYPE(genre)
+For Query:
+select d.fname, d.lname
+from Actor a, Casts c, Movie_Director m, Director d
+where a.id=c.pid and c.mid=m.mid and m.did=d.id 
+and a.fname='John' and a.lname='Spicer';
+
+The query plan is:
+
+
+
+                           π(d.fname,d.lname),card:3008
+                            |
+                           ⨝(a.id=c.pid),card:3008
+  __________________________|___________________________
+  |                                                    |
+ σ(a.lname=Spicer),card:1                            ⨝(m.mid=c.mid),card:3008
+  |                                    ________________|_________________
+ σ(a.fname=John),card:1               |                                |
+  |                                   ⨝(d.id=m.did),card:278          |
+  |                           _________|_________                       |
+  |                           |                 |                     scan(Casts c)
+scan(Actor a)               scan(Director d)  scan(Movie_Director m)
+
+
+
+We are using naive simple NL, we have to do scan first; ⨝(d.id=m.did) is the deepest join, because it has the lowest cardinality. The next join must share at least one field to ensure that the join is linear, so we execute ⨝(m.mid=c.mid) next. For the last join ⨝(a.id=c.pid), σ(a.lname=Spicer), and σ(a.fname=John) are pushed down because as you can see the slectivity is high, with cardinality of 1.
+
+My query:
+select d.fname, d.lname
+from Director d, Genre g, Movie_Director md, Movie m
+where md.did=d.id and g.mid=md.mid and m.id=g.mid and g.genre='Documentary' and m.year>2005;
+The query plan is:
+                                                 π(d.fname,d.lname),card:62
+                                                  |
+                                                 ⨝(g.mid=m.id),card:62
+                       ___________________________|____________________________
+                       |                                                      |
+                      ⨝(g.mid=md.mid),card:1                               σ(m.year>2005),card:62
+  _____________________|_____________________                                 |
+  |                                         |                                 |
+ σ(g.genre=Documentary),card:1            ⨝(d.id=md.did),card:278          |
+  |                                _________|_________                        |
+scan(Genre g)                      |                 |                        |
+                                 scan(Director d)  scan(Movie_Director md)  scan(Movie m)
+
+Using NL join, first we scanned the tables. ⨝(d.id=md.did) has the lowest cardinality so it was the deepest join. It must be execuated adjacent to ⨝(g.mid=md.mid), because joins must have at least one shared fields. σ(g.genre=Documentary) has high slectivity, so it was pushed down.  then we need to do joins ⨝(g.mid=m.id). the slection σ(m.year>2005) was pushed down. 
+
+I ran each join seperately to get a better idea of the their out put size. For instance, for the second query, ⨝(g.mid=md.mid) has 491 rows, ⨝(g.mid=m.id)'s output has 421 rows, ⨝(d.id=md.did) has 278 rows. And as expected, ⨝(d.id=md.did) was selected by my join optimizer as the deepest join.
+
 
 >>Descriptions
-#Predicate: use Field's compare method to implement the filter method.
-#JoinPredicate: The only difference between this and the Predicate is that it takes two fields.
-#Join: Used simple nested loop implementation. Used ArrayList to store qualified tuples. Initialize this ArrayList of Tuples in the open() method. This data structure makes it easier to do fetchNext(), and rewind(). Also initialized iterator<Tuple> it, to iterate through the tuples.
-#Filter: no need to change tuple, only need to filter out unwanted ones, fairly easy.
+#IntHistogram: each IntHistogram maintains a int[] that holds the actual histogram. Each array index holds the number of tuples in the corresponding bucket. The width of each bucket is calculated by taking the ceiling of max-min+1/number of buckets, so the last bucket may contain less than "width" number of posssible values. For addValue(), I find the appropriate bucket and increment the histogram[bucketIndex] by 1. For estimateSelectivity(), I first find the appropriate bucket index, the smallest and biggest possible values of the bucket, and the height of the bucket. I then follow the filter selectivity math procedures outlined in the project description for the appropriate operation, but only after I check the edge case for if the value is less than or greater than the histogram's min and max. I did not implement avgSelectivity().
 
-#Aggregate: initialized appropriate Aggregator object (StringAggregator or IntegerAggregator); in open(), created a new DbIterator made from calling Aggregator#mergeTupleIntoGroup on all tuples in the child. We then open() this new DbIterator and fetchNext() calls tuples from this new DbIterator.
-#IntegerAggregator: initialized 2 HashMap<Field, Integer> objects called groups and counts. Groups stores <groupValue, aggregateValue> where groupValue is denoted by a Field object. Counts is a an object I maintain for the AVG op, and stores <groupValue(as Field), count(Integer) of how many there are>, so I can divide the value in groups by the corresponding value in counts for a given key when computing the AVG. Also created a helper method getTupleDesc() that returns the TupleDesc of tuples as the pair (groupVal, aggregateVal) or as one field (aggregateVal).
-#StringAggregator: implementation very similar to #IntegerAggregator, except I only support the COUNT op.
+#TableStats: The major data structure maintained for a TableStats object is a HashMap<String,Object> called histograms that holds the field name and corresponding IntHistogram or StringHistogram. Most of the work done in this class is within the constructor. In the constructor, I scan the table twice, once to retrieve the min/max of each Integer field (stored in two HashMaps called minValues and maxValues), and once again to populate the histograms object with the Int and String Histograms for the table. I did these two scans by creating a new Transaction and creating a DbFileIterator to iterate through the tuples. For estimateScanCost(), I simply return the numPages of the file * ioCostPerPage. For estimateSelectivity(), I call the estimateSelectivity() method of the appropriate Histogram. 
 
-#HeapPage: for deleteTuple(), throw a DbException if this tuple is not on this page, or tuple slot is already empty, and set that tuple in the ArrayList of Tuples to null, also calling markSlotUsed to change the header of this page. For insertTuple(), throw a DbException if the page is full (no empty slots) or tupledesc is a mismatch, insert Tuple to the next empty slot. Implemented a helper function to get the index of next empty slot, so we could just inserted in the tuple lists of this page.
-#HeapFile: in readPage() and writepage(), we used RandomAccessFile to read and write to the underlying File; created a helper method, to return an ArrayList of empty pages. In insertTuple(), if there is empty page in this file, insert this tuple to this page; otherwise, insert this tuple to a newly created page, and writePage.
-
-#BufferPool: (Please see the following paragraph describing the eviction policy and implementation)
-In BufferPool, initialized a HashMap<PageId, Integer> object called recentlyUsed to aid in our eviction policy; insertTuple() and deleteTuple() both find the appropriate HeapFile and then call the HeapFile's insertTuple() or deleteTuple() method. Then, we make sure to markDirty() affected Pages; and for insertTuple(), we update the BufferPool's cached version of the page. Wrote helper function updateRecentlyUsed() which updates the recentlyUsed HashMap. getPage() calls evictPage() if the BufferPool's full.
-
-**Eviction policy and implementation in BufferPool: implemented a LRU eviction policy. We maintain a HashMap<PageId, Integer> structure as mentioned above that holds the PageId's of all Pages in the BufferPool. The corresponding Integer value denotes how long ago a Page is accessed. When a page is read or brought into the BufferPool, the HashMap is updated by putting the key-value pair as (PageId, 0). The 0 denotes that this Page was read this round. Each call to getPage() will also update all other key-value pairs in the HashMap, incrementing their Integer value by 1, indicating that it was accessed one more round ago then the previous getPage() round. This is done with the helper method updateRecentlyUsed(). When we call evictPage(), we go through the HashMap structure and return the Page with the PageId that had the greatest Integer (indicating it was accessed the longest time ago). 
-
-#Insert#Delete: the fetchNext() method in both return a 1-field tuple containing the number of inserted records, or null if called more than once, so we initialized a boolean fetched = false that tells if we have already called fetchNext(); as soon as the insertion and deletion is done, we change it to true. And if fetchNext was called again, it will return null.
+#JoinOptimizer: estimateJoinCost is pretty straightforward because we are using Simple NL Join; for estimateJoinCardinality, just write code following the equation provided. For orderJoins, followed the pseudocode and algorithm explained in class, and used helper function provided "computeCostAndCardOfSubplan" and "enumerateSubsets".
 
 >>Changed API
-No changes to the API except for the below listed changes from Proj1. A couple of helper methods were written, as mentioned above in the "Descriptions" section.
-These are changes from Proj1:
-#Table: Made Table a separate class. Reason: there are specific info(DbFile, name, and primarykey)about a table, we need to store it in catalog. I could have made it similar to TDItem's implementation, but this is easier to built, maintain and test.
-#HeapPageIterator, #HeapFileIterator: Made them seperate classes. Reason:These Iterators are not as straight-forward as the others. Also seperate class is easy to built, maintain and test.
+no real changes were made to the API
 
 >>Missing or incomplete elements of your code
-Passed all tests for now. Might change structures later for proj3~4.
+Passed all tests for now. Might change structures later for proj4.
 
 >>Who worked on what
 PairProgramming driver and navigator
-Shihao Ren(bz): driver on 2.1
-Nan Li(bs): driver on 2.2
-Both: worked on 2.3-2.7
+Shihao Ren(bz): driver on Exercise 4,5
+Nan Li(bs): driver on Exercise 2,3
+Both: worked on Exercise 1, 6
 
 >>Time&Difficulty
-Roughly 16 hours spanning over 3 days for the entire project.
-Difficulty: Aggregate was confusing at first. 
+Roughly 15 hours spanning over 3 days for the entire project.
+Difficulty: Better than Project2.

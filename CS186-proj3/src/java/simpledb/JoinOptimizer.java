@@ -111,7 +111,8 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic nested-loops
             // join.
-            return -1.0;
+            double cost=cost1+card1*cost2+card1*card2;
+            return cost;
         }
     }
 
@@ -135,7 +136,7 @@ public class JoinOptimizer {
      * @return The cardinality of the join
      */
     public int estimateJoinCardinality(LogicalJoinNode j, int card1, int card2,
-            boolean t1pkey, boolean t2pkey, HashMap<String, TableStats> stats) {
+            boolean t1pkey, boolean t2pkey, Map<String, TableStats> stats) {
         if (j instanceof LogicalSubplanJoinNode) {
             // A LogicalSubplanJoinNode represents a subquery.
             // You do not need to implement proper support for these for Project 3.
@@ -152,10 +153,26 @@ public class JoinOptimizer {
     public static int estimateTableJoinCardinality(Predicate.Op joinOp,
             String table1Alias, String table2Alias, String field1PureName,
             String field2PureName, int card1, int card2, boolean t1pkey,
-            boolean t2pkey, HashMap<String, TableStats> stats,
-            HashMap<String, Integer> tableAliasToId) {
+            boolean t2pkey, Map<String, TableStats> stats,
+            Map<String, Integer> tableAliasToId) {
         int card = 1;
         // some code goes here
+        if (joinOp==Predicate.Op.EQUALS){
+            if (t1pkey && !t2pkey){
+                card=card2;
+            } else if (t2pkey && !t1pkey){
+                card=card1;
+            } else {
+            //R: if both primary key or neither primary key, return the bigger one
+                card = card1>card2 ? card1 : card2;
+            }
+
+
+        }else {
+            card = (int) (0.3* card1 * card2);
+
+        }
+
         return card <= 0 ? 1 : card;
     }
 
@@ -222,7 +239,55 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
-        return joins;
+        // 1. j = set of join nodes
+        // 2. for (i in 1...|j|):  // First find best plan for single join, then for two joins, etc. 
+        // 3.     for s in {all length i subsets of j} // Looking at a concrete subset of joins
+        // 4.       bestPlan = {}  // We want to find the best plan for this concrete subset 
+        // 5.       for s' in {all length i-1 subsets of s} 
+        // 6.            subplan = optjoin(s')  // Look-up in the cache the best query plan for s but with one relation missing
+        // 7.            plan = best way to join (s-s') to subplan // Now find the best plan to extend s' by one join to get s
+        // 8.            if (cost(plan) < cost(bestPlan))
+        // 9.               bestPlan = plan // Update the best plan for computing s
+        // 10.      optjoin(s) = bestPlan
+        // 11. return optjoin(j)
+        Set<LogicalJoinNode> joinSet = new HashSet<LogicalJoinNode>();
+        joinSet.addAll(joins);                
+        Set<Set<LogicalJoinNode>> j = enumerateSubsets(joins, 1);
+        PlanCache optjoin = new PlanCache();
+
+        int sizeOfj=j.size();
+        for (int i=1; i<=sizeOfj; i++){
+            // if (i==1){
+            //     for (Set<LogicalJoinNode> j1: j){
+            //         CostCard singleJCostCard=computeCostAndCardOfSubplan(stats, filterSelectivities, j1.iterator.next(), j1, Double.MAX_VALUE, optjoin)
+            //     }
+            // }
+
+            Set<Set<LogicalJoinNode>> lenISubsetOfj= enumerateSubsets(joins, i);
+
+            for (Set<LogicalJoinNode> s : lenISubsetOfj){
+
+                Double bestCostSoFar=Double.MAX_VALUE;
+
+                Integer bestCardSofar=Integer.MAX_VALUE;
+
+                Vector<LogicalJoinNode> bestPlanSofar= null;
+
+                for (LogicalJoinNode s1 : s){
+                    CostCard costcard = computeCostAndCardOfSubplan(stats, filterSelectivities, s1, s, Double.MAX_VALUE, optjoin);
+
+                    if (costcard !=null && costcard.cost< bestCostSoFar){
+                        bestPlanSofar=costcard.plan;
+                        bestCardSofar=costcard.card;
+                        bestCostSoFar=costcard.cost;
+                    }
+                }
+                optjoin.addPlan(s, bestCostSoFar, bestCardSofar, bestPlanSofar);
+            }
+
+        }
+        Vector<LogicalJoinNode> bestJoinOrder=optjoin.getOrder(joinSet);
+        return bestJoinOrder;
     }
 
     // ===================== Private Methods =================================
